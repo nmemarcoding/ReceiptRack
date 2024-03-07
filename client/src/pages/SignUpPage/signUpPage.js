@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react'
+import { publicRequest } from '../../hooks/requestMethods'
+import { useNavigate } from 'react-router-dom'
 
 export default function SignUpPage() {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -14,6 +17,19 @@ export default function SignUpPage() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+            return alert("Please fill in all fields");
+        }
+        publicRequest().post("auth/register",formData)
+        .then((res) => {
+            console.log(res)
+            navigate('/login');
+            
+
+        })
+        .catch((err) => {
+            console.log(err)
+        })
         // Perform signup logic here
     };
 
