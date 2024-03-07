@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const authRoute = require('./routes/auth');
 
 
 require('dotenv').config();
@@ -27,7 +28,7 @@ mongoose
 
 
 // use routes
-
+app.use("/api/auth", authRoute);
 
 const port = process.env.PORT || 3002;
 
