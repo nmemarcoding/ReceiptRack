@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { publicRequest } from '../../hooks/requestMethods';
+import { useNavigate } from 'react-router-dom';
+import useStore from '../../store';
 
 export default function LoginPage() {
+    const navigate = useNavigate();
+    const addUserInfo = useStore((state) => state.addUserInfo);
+
     const [formData, setFormData] = useState({ email: '', password: '' });
 
     const handleChange = (e) => {
@@ -9,7 +16,24 @@ export default function LoginPage() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Perform login logic here
+        if (!formData.email || !formData.password) {
+            return alert('Please fill in all fields');
+        }
+        
+        publicRequest().post('auth/login', formData)
+            .then((response) => {
+                alert('Logged in successfully');
+                addUserInfo(response.data);
+                if (response.data.isAdmin) {
+                    navigate('/admindashboard');
+                } else {
+                    navigate('/');
+                }
+            })
+            .catch((error) => {
+                alert(error.response.data || 'An error occurred');
+            })
+            
     };
 
     return (
