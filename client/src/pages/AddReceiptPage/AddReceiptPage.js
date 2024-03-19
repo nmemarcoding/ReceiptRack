@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar/navbar';
+import useImageToText from '../../hooks/useImageToText';
 
 export default function AddReceiptPage() {
     const [isMobileDevice, setIsMobileDevice] = useState(false);
     const [capturedImages, setCapturedImages] = useState([]);
+    const [currentImage, setCurrentImage] = useState(null);
+    const [imageTexts, setImageTexts] = useState({}); // Store text for each image
+
+    const { isLoading, text, error } = useImageToText(currentImage);
 
     useEffect(() => {
         const checkDeviceType = () => {
@@ -14,51 +19,56 @@ export default function AddReceiptPage() {
         checkDeviceType();
     }, []);
 
+    useEffect(() => {
+        if (text) {
+            // Store the text for the current image
+            setImageTexts(prevTexts => ({ ...prevTexts, [currentImage]: text }));
+            console.log("Extracted text:", text);
+        }
+    }, [text, currentImage]);
+
     const handleFileChange = (event) => {
+        event.preventDefault(); // Prevent any default action
         const files = event.target.files;
-        if (files.length > 0) {
+        if (files && files[0]) {
             const file = files[0];
             const reader = new FileReader();
-            reader.onload = function(event) {
-                setCapturedImages([...capturedImages, event.target.result]);
+            reader.onload = function(e) {
+                const imageUrl = e.target.result;
+                setCapturedImages(prevImages => [...prevImages, imageUrl]);
+                setCurrentImage(imageUrl); // Set image for OCR
             };
             reader.readAsDataURL(file);
         }
-
-        // Remove the capture attribute after file is selected
-        const fileInput = document.getElementById('file-upload');
-        fileInput.removeAttribute('capture');
     };
 
-    const handleChooseFromGallery = () => {
-        const fileInput = document.getElementById('file-upload');
-        fileInput.removeAttribute('capture'); // Remove capture attribute
-        fileInput.click(); // Programmatically trigger file input to choose from gallery
+    const handleChooseFromGallery = (event) => {
+        event.preventDefault(); // Prevent any default action
+        document.getElementById('file-upload').click();
     };
 
-    const handleScanReceipt = () => {
+    const handleScanReceipt = (event) => {
+        event.preventDefault(); // Prevent any default action
+        const fileInput = document.getElementById('file-upload');
         if (isMobileDevice) {
-            const fileInput = document.getElementById('file-upload');
-            fileInput.setAttribute('capture', 'environment'); // Set capture attribute to open camera
-            fileInput.click(); // Programmatically trigger file input to open camera
+            fileInput.setAttribute('capture', 'environment');
         } else {
-            // Handle opening the camera for non-mobile devices
-            console.log("Opening camera...");
+            console.log("Opening gallery...");
         }
+        fileInput.click();
     };
 
     return (
         <div className="min-h-screen bg-green-100 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8 mb-[90px]">
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    Add Your Receipt
+                </h2>
+                <p className="mt-2 text-center text-sm text-gray-600">
+                    Upload a photo of your receipt and we'll extract the text for you.
+                </p>
+                {/* Wrap the input and buttons in a div instead of a form to avoid default form submission behavior */}
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Add Your Receipt
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        Upload a photo of your receipt
-                    </p>
-                </div>
-                <form className="mt-8 space-y-6" action="#" method="POST">
                     <input
                         type="file"
                         accept="image/*"
@@ -67,27 +77,31 @@ export default function AddReceiptPage() {
                         className="sr-only"
                         onChange={handleFileChange}
                     />
-                    <label
-                        htmlFor="file-upload"
-                        className="cursor-pointer relative block w-full rounded-md border border-gray-300 bg-white py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    <button
+                        type="button" // Specify button type to avoid unintended submissions
+                        onClick={handleChooseFromGallery}
+                        className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
-                        <span>Choose from Gallery</span>
-                        <span className="absolute right-0 px-3 py-2 text-green-600">📂</span>
-                    </label>
+                        Choose from Gallery
+                    </button>
                     {isMobileDevice && (
                         <button
-                            type="button"
+                            type="button" // Specify button type to avoid unintended submissions
                             onClick={handleScanReceipt}
-                            className="cursor-pointer relative block w-full rounded-md border border-gray-300 bg-white mt-4 py-2 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
-                            <span>Scan Receipt</span>
-                            <span className="absolute right-0 px-3 py-2 text-green-600">📷</span>
+                            Scan Receipt
                         </button>
                     )}
-                </form>
+                </div>
                 <div className="mt-4">
                     {capturedImages.map((image, index) => (
-                        <img key={index} src={image} alt={`Captured ${index}`} className="mt-4 w-full rounded-md border border-gray-300" />
+                        <div key={index} className="mt-4 w-full">
+                            <img src={image} alt={`Captured receipt ${index}`} className="rounded-md border border-gray-300" />
+                            {isLoading && currentImage === image && <p>Loading...</p>}
+                            {error && currentImage === image && <p>Error occurred: {error}</p>}
+                            {imageTexts[image] && <p>Extracted Text: {imageTexts[image]}</p>}
+                        </div>
                     ))}
                 </div>
             </div>
