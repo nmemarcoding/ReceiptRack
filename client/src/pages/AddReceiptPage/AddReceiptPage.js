@@ -6,7 +6,8 @@ export default function AddReceiptPage() {
     const [isMobileDevice, setIsMobileDevice] = useState(false);
     const [capturedImages, setCapturedImages] = useState([]);
     const [currentImage, setCurrentImage] = useState(null);
-    const [imageTexts, setImageTexts] = useState({}); // Store text for each image
+    const [imageTexts, setImageTexts] = useState({});
+    const [visibleTextImage, setVisibleTextImage] = useState(null); // State to manage visibility of text
 
     const { isLoading, text, error } = useImageToText(currentImage);
 
@@ -21,14 +22,13 @@ export default function AddReceiptPage() {
 
     useEffect(() => {
         if (text) {
-            // Store the text for the current image
             setImageTexts(prevTexts => ({ ...prevTexts, [currentImage]: text }));
             console.log("Extracted text:", text);
         }
     }, [text, currentImage]);
 
     const handleFileChange = (event) => {
-        event.preventDefault(); // Prevent any default action
+        event.preventDefault();
         const files = event.target.files;
         if (files && files[0]) {
             const file = files[0];
@@ -36,19 +36,21 @@ export default function AddReceiptPage() {
             reader.onload = function(e) {
                 const imageUrl = e.target.result;
                 setCapturedImages(prevImages => [...prevImages, imageUrl]);
-                setCurrentImage(imageUrl); // Set image for OCR
+                setCurrentImage(imageUrl);
             };
             reader.readAsDataURL(file);
         }
     };
 
     const handleChooseFromGallery = (event) => {
-        event.preventDefault(); // Prevent any default action
-        document.getElementById('file-upload').click();
+        event.preventDefault();
+        const fileInput = document.getElementById('file-upload');
+        fileInput.setAttribute('multiple', 'multiple');
+        fileInput.click();
     };
 
     const handleScanReceipt = (event) => {
-        event.preventDefault(); // Prevent any default action
+        event.preventDefault();
         const fileInput = document.getElementById('file-upload');
         if (isMobileDevice) {
             fileInput.setAttribute('capture', 'environment');
@@ -56,6 +58,10 @@ export default function AddReceiptPage() {
             console.log("Opening gallery...");
         }
         fileInput.click();
+    };
+
+    const toggleTextVisibility = (image) => {
+        setVisibleTextImage(visibleTextImage === image ? null : image);
     };
 
     return (
@@ -67,7 +73,6 @@ export default function AddReceiptPage() {
                 <p className="mt-2 text-center text-sm text-gray-600">
                     Upload a photo of your receipt and we'll extract the text for you.
                 </p>
-                {/* Wrap the input and buttons in a div instead of a form to avoid default form submission behavior */}
                 <div>
                     <input
                         type="file"
@@ -78,7 +83,7 @@ export default function AddReceiptPage() {
                         onChange={handleFileChange}
                     />
                     <button
-                        type="button" // Specify button type to avoid unintended submissions
+                        type="button"
                         onClick={handleChooseFromGallery}
                         className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
@@ -86,7 +91,7 @@ export default function AddReceiptPage() {
                     </button>
                     {isMobileDevice && (
                         <button
-                            type="button" // Specify button type to avoid unintended submissions
+                            type="button"
                             onClick={handleScanReceipt}
                             className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
@@ -95,12 +100,23 @@ export default function AddReceiptPage() {
                     )}
                 </div>
                 <div className="mt-4">
-                    {capturedImages.map((image, index) => (
+                    {[...capturedImages].reverse().map((image, index) => (
                         <div key={index} className="mt-4 w-full">
                             <img src={image} alt={`Captured receipt ${index}`} className="rounded-md border border-gray-300" />
+                            <button
+                                onClick={() => toggleTextVisibility(image)}
+                                className="text-blue-500 hover:text-blue-700 text-sm"
+                            >
+                                {visibleTextImage === image ? 'Hide Text' : 'Show Text'}
+                            </button>
                             {isLoading && currentImage === image && <p>Loading...</p>}
                             {error && currentImage === image && <p>Error occurred: {error}</p>}
-                            {imageTexts[image] && <p>Extracted Text: {imageTexts[image]}</p>}
+                            {visibleTextImage === image && imageTexts[image] && (
+                                <div className="mt-2 p-2 bg-gray-100 border border-gray-300 rounded">
+                                    <p>Extracted Text:</p>
+                                    <p>{imageTexts[image] }</p>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
